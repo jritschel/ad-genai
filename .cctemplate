@@ -1,13 +1,13 @@
 {
-  "name": "cloud-run-microservice-template-python",
+  "name": "genai-ad",
   "metadata": {
     "version": "0.1.0"
   },
   "templates": [
     {
       "path": "./",
-      "name": "Cloud Run Microservice Template - Python",
-      "description": "Basic microservice template for Cloud Run",
+      "name": "Cloud Run Microservice for Generative AI",
+      "description": "Basic GenAI template for Cloud Run",
       "languages": [
         "Python",
         "Dockerfile"
