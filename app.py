@@ -1,57 +1,55 @@
-# Copyright 2021 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+""" Generation of text with text-bison@001
+    https://cloud.google.com/vertex-ai/docs/generative-ai/learn/models
+"""
 
-import signal
-import sys
-from types import FrameType
+from google.cloud import aiplatform
+import google.cloud.logging
 
-from flask import Flask
+import vertexai
+from vertexai.preview.language_models import TextGenerationModel
 
-from utils.logging import logger
+import gradio as gr
 
-app = Flask(__name__)
+PROJECT_ID = "manifest-emblem-651"
+LOCATION = "us-central1"
+
+client = google.cloud.logging.Client(project=PROJECT_ID)
+client.setup_logging()
+
+log_name = "genai-vertex-text-log"
+logger = client.logger(log_name)
 
 
-@app.route("/")
-def hello() -> str:
-    # Use basic logging with custom fields
-    logger.info(logField="custom-entry", arbitraryField="custom-entry")
+vertexai.init(project=PROJECT_ID, location=LOCATION)
 
-    # https://cloud.google.com/run/docs/logging#correlate-logs
-    logger.info("Child logger with trace Id.")
+model = TextGenerationModel.from_pretrained("text-bison@001")
 
-    return "Hello, World!"
+def predict(prompt, max_output_tokens, temperature, top_p, top_k):
+    logger.log_text(prompt)
+    answer = model.predict(
+        prompt,
+        max_output_tokens=max_output_tokens, # default 128
+        temperature=temperature, # default 0
+        top_p=top_p, # default 1
+        top_k=top_k) # default 40
+    return answer
 
+examples = [
+    ["Best receipt for banana bread:"],
+    ["You are an equities analyst researching information for your report with relevant facts and figures. Tell me about the mortgage market in US."],
+    ["Brainstorm some ideas combining VR and fitness:"],
+]
 
-def shutdown_handler(signal_int: int, frame: FrameType) -> None:
-    logger.info(f"Caught Signal {signal.strsignal(signal_int)}")
+demo = gr.Interface(
+    predict, 
+    [ gr.Textbox(label="Enter prompt:", value="Best receipt for banana bread:"),
+      gr.Slider(32, 1024, value=512, step = 32, label = "max_output_tokens"),
+      gr.Slider(0, 1, value=0.2, step = 0.1, label = "temperature"),
+      gr.Slider(0, 1, value=0.8, step = 0.1, label = "top_p"),
+      gr.Slider(1, 40, value=38, step = 1, label = "top_k"),
+    ],
+    "text",
+    examples=examples
+    )
 
-    from utils.logging import flush
-
-    flush()
-
-    # Safely exit program
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    # Running application locally, outside of a Google Cloud Environment
-
-    # handles Ctrl-C termination
-    signal.signal(signal.SIGINT, shutdown_handler)
-
-    app.run(host="localhost", port=8080, debug=True)
-else:
-    # handles Cloud Run container termination
-    signal.signal(signal.SIGTERM, shutdown_handler)
+demo.launch(server_name="0.0.0.0", server_port=7860)
