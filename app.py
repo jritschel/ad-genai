@@ -13,8 +13,7 @@ import gradio as gr
 import os
 PROJECT_ID = os.environ['DEVSHELL_PROJECT_ID']
 # PROJECT_ID = "manifest-emblem-651"
-LOCATION = os.environ['REGION']
-# LOCATION = "us-central1"
+LOCATION = "us-central1"
 
 client = google.cloud.logging.Client(project=PROJECT_ID)
 client.setup_logging()
